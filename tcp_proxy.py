@@ -9,6 +9,8 @@ import threading
 def proxy_handler(client_socket, remote_host, remote_port, receive_first):
 
     # connect to the remote host
+    remote_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
     remote_socket.connect((remote_host, remote_port))
 
     # Receive data from the remote end, if necessary
@@ -58,7 +60,7 @@ def proxy_handler(client_socket, remote_host, remote_port, receive_first):
                 print "[<==] Sent to localhost."
 
             # If no more data on either side, close the connections
-            if not len(local_buffer) or not let(remote_buffer):
+            if not len(local_buffer) or not len(remote_buffer):
                 client_socket.close()
                 remote_socket.close()
                 print "[*] No more data. Closing Connections."
@@ -93,6 +95,51 @@ def server_loop(local_host, local_port, remote_host, remote_port,
                                         remote_port, receive_first))
 
         proxy_thread.start()
+
+
+# This is a pretty hex dumping function directly taken from the comments here:
+# http://code.activestate.com/recipes/142812-hex-dumper
+def hexdump(src, length=16):
+    result = []
+    digits = 4 if isinstance(src, unicode) else 2
+    for i in xrange(0, len(src), length):
+        s = src[i:i+length]
+        hexa = b' '.join(["%0*X" % (digits, ord(x)) for x in s])
+        text = b''.join([x if 0x20 <= ord(x) < 0x7f else b'.' for x in s])
+        result.append(b"%04X %-*s %s" % (i, length*(digits + 1), hexa, text))
+    print b'\n'.join(result)
+
+
+def receive_from(connection):
+    buffer = ""
+
+    # We set a 2 second timeout; depending on your target, this may need to be
+    # adjusted
+    connection.settimeout(2)
+
+    try:
+        # Keep reading into the buffer until there's no more data,
+        # or we timeout
+        while True:
+            data = connection.recv(4096)
+
+            if not data:
+                break
+            buffer += data
+    except:
+        pass
+
+
+# Modify any requests destined for the remote host
+def request_handler(buffer):
+    # Perform packet modifications
+    return buffer
+
+
+# Modify any responses destined for the local host
+def response_handler(buffer):
+    # Perform packet modifications
+    return buffer
 
 
 def main():
