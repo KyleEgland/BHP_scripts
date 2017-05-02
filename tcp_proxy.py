@@ -43,29 +43,29 @@ def proxy_handler(client_socket, remote_host, remote_port, receive_first):
             remote_socket.send(local_buffer)
             print "[==>] Sent to remote."
 
-            # Receive back the response
-            remote_buffer = receive_from(remote_socket)
+        # Receive back the response
+        remote_buffer = receive_from(remote_socket)
 
-            if len(remote_buffer):
+        if len(remote_buffer):
 
-                print "[<==] Received %d bytes from remote." % len(remote_buffer)
-                hexdump(remote_buffer)
+            print "[<==] Received %d bytes from remote." % len(remote_buffer)
+            hexdump(remote_buffer)
 
-                # Send to response handler
-                remote_buffer = response_handler(remote_buffer)
+            # Send to response handler
+            remote_buffer = response_handler(remote_buffer)
 
-                # send the response to the local socket
-                client_socket.send(remote_buffer)
+            # send the response to the local socket
+            client_socket.send(remote_buffer)
 
-                print "[<==] Sent to localhost."
+            print "[<==] Sent to localhost."
 
-            # If no more data on either side, close the connections
-            if not len(local_buffer) or not len(remote_buffer):
-                client_socket.close()
-                remote_socket.close()
-                print "[*] No more data. Closing Connections."
+        # If no more data on either side, close the connections
+        if not len(local_buffer) or not len(remote_buffer):
+            client_socket.close()
+            remote_socket.close()
+            print "[*] No more data. Closing Connections."
 
-                break
+            break
 
 
 def server_loop(local_host, local_port, remote_host, remote_port,
@@ -115,7 +115,7 @@ def receive_from(connection):
 
     # We set a 2 second timeout; depending on your target, this may need to be
     # adjusted
-    connection.settimeout(2)
+    connection.settimeout(10)
 
     try:
         # Keep reading into the buffer until there's no more data,
@@ -128,6 +128,7 @@ def receive_from(connection):
             buffer += data
     except:
         pass
+    return buffer
 
 
 # Modify any requests destined for the remote host
