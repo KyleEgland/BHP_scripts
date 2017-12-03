@@ -1,48 +1,12 @@
 #! python3
-# Replacing Netcat, Chapter 2, "Black Hat Python"
-# Original script written to work with Python 2, this script was an update from
-# the original to work with Python 3.
-# Netcat Replicant
-import sys
+# This is a revision to the netcat program created in the Black Hat Python book
+import argparse
 import socket
-import getopt
 import threading
 import subprocess
 
-# Define some global variables
-listen = False
-command = False
-upload = False
-execute = ""
-target = ""
-upload_destination = ""
-port = 0
 
-
-# Function for printing the "usage" of the tool
-def usage():
-    print('''BHP Net Tool
-Usage:  netcat_replicant.py  -t target_host -p port
--l --listen                  - listen on [host]:[port] for
-                               incoming connections
--e --execute=filte_to_run    - execute the given file upon
-                               receiving a connection
--c --command                 - initialize a command shell
--u --upload=destination      - upon receiving connection upload a
-                               file and write to [desination]
-
-Examples:
-netcat_replicant.py -t 192.168.0.1 -p 5555 -l -c
-netcat_replicant.py -t 192.168.0.1 -p 5555 -l -u=c:\\target.exe
-netcat_replicant.py -t 192.168.0.1 -p 5555 -l -e "cat /etc/passwd"
-echo 'ABCDEFGHI' | ./netcat_replicant.py -t 192.168.11.12 -p 135''')
-    sys.exit(0)
-
-
-def client_sender(buffer):
-    global target
-    global port
-
+def client_sender(buffer, target, port):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         # Connect to our target host
@@ -79,11 +43,8 @@ def client_sender(buffer):
         client.close()
 
 
-def server_loop():
-    global target
+def server_loop(port, target='0.0.0.0'):
     # If no target is defined, we listen on all interfaces
-    if not len(target):
-        target = "0.0.0.0"
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((target, port))
@@ -114,13 +75,9 @@ def run_command(command):
     return output
 
 
-def client_handler(client_socket):
-    global upload
-    global execute
-    global command
-
+def client_handler(client_socket, upload_dest, execute, command):
     # Check for upload
-    if len(upload_destination):
+    if len(upload_dest):
 
         # Read in all of the bytes and write to our destination
         file_buffer = ""
@@ -136,17 +93,17 @@ def client_handler(client_socket):
 
         # Now we take these bytes and try to write them out
         try:
-            file_descriptor = open(upload_destination, "wb")
+            file_descriptor = open(upload_dest, "wb")
             file_descriptor.write(file_buffer)
             file_descriptor.close()
 
             # Acknowledge that we wrote the file out
             client_socket.send("Successfully saved file to %s\r\n" %
-                               upload_destination)
+                               upload_dest)
         except Exception as e:
             print('[-] ERR:  {}'.format(e))
             client_socket.send("Failed to save file to %s\r\n" %
-                               upload_destination)
+                               upload_dest)
 
         # Check for command execution
         if len(execute):
@@ -174,56 +131,26 @@ def client_handler(client_socket):
 
 
 def main():
-    global listen
-    global port
-    global execute
-    global command
-    global upload_destination
-    global target
+    desc = 'Netcat-like program made using Python 3.'
+    use = '\n\
+nc2.py -t 192.168.0.1 -p 5555 -l -c\n\
+nc2.py -t 192.168.0.1 -p 5555 -l -u=c:\\target.exe\n\
+nc2.py -t 192.168.0.1 -p 5555 -l -e "cat /etc/passwd"'
+    parser = argparse.ArgumentParser(description=desc, usage=use)
+    parser.add_argument('-t', '--target', type=str,
+                        help='Input the IPv4 address of target machine.')
+    parser.add_argument('-p', '--port', type=int,
+                        help='Input number of target port')
+    parser.add_argument('-e', '--execute', type=str,
+                        help='Execute the given file upon receiving a \
+connection')
+    parser.add_argument('-c', '--command', type=str,
+                        help='Initialize a command shell')
+    parser.add_argument('-u', '--upload', type=str,
+                        help='Upon receiving connection, upload a file and \
+write to [destination].  Usage "--upload=destination"')
 
-    if not len(sys.argv[1:]):
-        usage()
-    # Read the commandline options
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "hle:t:p:cu:",
-                                   ["help", "listen", "execute",
-                                    "target", "port", "command", "upload"])
-    except getopt.GetoptError as err:
-        print(str(err))
-        usage()
-
-    for o, a in opts:
-        if o in ("-h", "--help"):
-            usage()
-        elif o in ("-l", "--listen"):
-            listen = True
-        elif o in ("-e", "--execute"):
-            execute = a
-        elif o in ("-c", "--commandshell"):
-            command = True
-        elif o in ("-u", "--upload"):
-            upload_destination = a
-        elif o in ("-t", "--target"):
-            target = a
-        elif o in ("-p", "--port"):
-            port = int(a)
-        else:
-            assert False, "Unhandled Option"
-
-    # Are we going to listen or just send data from stdin?
-    if not listen and len(target) and port > 0:
-        # Read in the buffer from the commandline
-        # This will block, so send Ctrl + d if not sending input
-        # to stdin
-        buffer = sys.stdin.read()
-
-        # send data off
-        client_sender(buffer)
-
-    # We are going to listen and potentially upload things, execute commands,
-    # and drop a shell back - depending on our command line options above
-    if listen:
-        server_loop()
+    args = parser.parse_args()
 
 
 if __name__ == '__main__':
