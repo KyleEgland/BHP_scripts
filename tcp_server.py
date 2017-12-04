@@ -5,10 +5,14 @@
 import socket
 import threading
 
+# IP to use for server
 bind_ip = "0.0.0.0"
+# Port to be used for server
 bind_port = 9999
+# Create socket object
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+# Bind the IP and port
 server.bind((bind_ip, bind_port))
 
 server.listen(5)
