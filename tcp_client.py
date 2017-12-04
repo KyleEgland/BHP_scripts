@@ -3,7 +3,9 @@
 # Simple TCP client
 import socket
 
+# Target to be contacted
 target_host = "127.0.0.1"
+# Port of host to be contacted
 target_port = 9999
 
 # Create a socket object
