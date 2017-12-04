@@ -13,9 +13,11 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((target_host, target_port))
 
 # send some data
-client.send("ABCDEF")
+client.send("ABCDEF".encode('utf-8'))
 
 # Receive some data
 response = client.recv(4096)
 
-print response
+printable = response.decode('utf-8')
+
+print(printable)
